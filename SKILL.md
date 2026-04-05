@@ -1,12 +1,12 @@
 ---
-name: modbus-rtu-generator
+name: uart-customized-protocol
 description: |
-  This skill should be used when the user wants to create a Modbus RTU master communication application using Qt. It provides complete project templates, Modbus protocol implementation, and step-by-step guidance for building a Modbus RTU debugging tool. Triggers: "create modbus rtu", "modbus rtu上位机", "modbus", "build modbus master".
+  This skill should be used when the user wants to create a Qt-based serial port (UART) master application with fully customizable communication protocols. It provides complete project templates, protocol handler implementation, and step-by-step guidance for building a UART debugging tool with configurable frame header, address, command codes, and checksum methods. Triggers: "create uart", "uart上位机", "串口协议", "自定义协议", "serial port", "custom protocol", "build uart master".
 ---
 
-# Modbus RTU Generator
+# UART Customized Protocol Generator
 
-Generate a complete Modbus RTU master communication application based on Qt.
+Generate a complete Qt-based serial port master application with fully customizable communication protocols.
 
 ## Project Structure
 
@@ -298,3 +298,99 @@ uic mainwindow.ui -o ui_mainwindow.h
 | 电源参数 | R0-R9 | 可读写参数 |
 | 运行监控 | R100-R109 | 只读状态 |
 | HMI控制 | R0-R9 | 可读写参数 |
+
+---
+
+## 🔧 本项目经验教训（digitaluartcontrol）
+
+### ❌ 错误1：函数在 .cpp 中实现但未在 .h 中声明
+
+**问题描述**：`sendPowerParam` 函数在 `mainwindow.cpp` 第330行实现，但在 `mainwindow.h` 中忘记声明。
+
+**症状**：编译报错 "was not declared in this scope"
+
+**正确做法**：
+```cpp
+// mainwindow.h
+private:
+    void sendPowerParam(int addr, const QString &valueStr);  // 必须声明
+
+// mainwindow.cpp
+void MainWindow::sendPowerParam(int addr, const QString &valueStr)
+{
+    // 实现...
+}
+```
+
+### ❌ 错误2：Qt 6 信号名称不兼容
+
+**问题描述**：`QSerialPort::error` 信号在 Qt 6 中改名为 `errorOccurred()`
+
+**症状**：编译报错 "no member named 'error' in 'QSerialPort'"
+
+**正确做法**：
+```cpp
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    connect(m_serialPort, &QSerialPort::errorOccurred, this, &SerialPortManager::onError);
+#else
+    connect(m_serialPort, QOverload<QSerialPort::SerialPortError>::of(&QSerialPort::error),
+            this, &SerialPortManager::onError);
+#endif
+```
+
+### ❌ 错误3：协议参数未完全自定义
+
+**问题描述**：初始实现的协议参数（帧头、地址、命令码、校验方式）硬编码，用户无法自定义。
+
+**症状**：用户反馈 "和你描述的通信协议对应不上，而且长度和帧头、地址都不能自定义"
+
+**正确做法**：
+1. 添加可配置的协议参数（UI 输入框）：
+   - 帧头（Frame Header）
+   - 设备地址（Device Address）
+   - 读/写/状态命令码
+   - 校验方式（XOR/Sum/CRC8/None）
+2. 将配置保存到 ProtocolHandler 类
+3. 组帧时从配置读取而非硬编码
+
+### ✅ 改进后的协议设计
+
+```cpp
+class ProtocolHandler {
+public:
+    void setFrameHeader(quint8 header);      // 设置帧头
+    void setDeviceAddress(quint8 addr);     // 设置设备地址
+    void setReadCommand(quint8 cmd);        // 设置读命令
+    void setWriteCommand(quint8 cmd);       // 设置写命令
+    void setCheckType(CheckType type);      // 设置校验方式
+    
+    QByteArray buildFrame(quint8 cmd, quint8 addr, const QByteArray &data);
+};
+```
+
+---
+
+## 📋 修改文件检查清单
+
+每次修改 Qt 项目后，按以下清单检查：
+
+### 1. 头文件 (.h) 检查
+- [ ] 所有自定义 slot 函数是否已声明
+- [ ] 所有自定义 helper 函数是否已声明
+- [ ] 是否包含所有需要的 Qt 头文件（QLineEdit, QTextEdit, QComboBox 等）
+- [ ] signals / slots / public / private 区域是否正确
+
+### 2. 源文件 (.cpp) 检查
+- [ ] 所有声明的函数是否都有实现
+- [ ] signal/slot 连接是否正确（Qt 5/6 兼容）
+- [ ] UI 控件名称是否与 .ui 文件匹配
+
+### 3. UI 文件 (.ui) 检查
+- [ ] 所有 XML 标签是否正确闭合（`<widget>...</widget>`）
+- [ ] 控件 objectName 是否唯一
+- [ ] 运行 `uic mainwindow.ui` 验证格式
+
+### 4. 协议相关检查
+- [ ] 帧头、地址、命令码是否可配置
+- [ ] 校验算法是否正确实现
+- [ ] 长度字段计算是否正确（含/不含帧头）
