@@ -200,7 +200,41 @@ edit->setStyleSheet(
 
 ## ⚠️ 头文件 include 完整性检查（重要）
 
-在 `.h` 头文件中使用任何 Qt 控件类型时，必须包含对应的头文件：
+### 核心原则
+
+**在 `.h` 文件中出现的任何 Qt 类型，都必须在文件顶部添加对应的 `#include`**！
+
+这不是建议，是必须遵守的规则！
+
+### 常见错误案例
+
+```cpp
+// ❌ 错误：只加了 QLineEdit，漏了 QPushButton
+#include <QLineEdit>
+
+class MainWindow : public QMainWindow {
+private:
+    QVector<QLineEdit*> motorParamEdits;           // ← 加了 include
+    QVector<QPushButton*> motorParamWriteButtons;  // ← 漏了！报错！
+    QPushButton *btnMonitorStart;                  // ← 漏了！报错！
+};
+```
+
+```cpp
+// ✅ 正确：所有用到的类型都要 include
+#include <QLineEdit>
+#include <QPushButton>
+#include <QVector>
+
+class MainWindow : public QMainWindow {
+private:
+    QVector<QLineEdit*> motorParamEdits;
+    QVector<QPushButton*> motorParamWriteButtons;
+    QPushButton *btnMonitorStart;
+};
+```
+
+### 常用控件头文件清单
 
 | 控件类型 | 必须添加的头文件 |
 |---------|----------------|
@@ -211,13 +245,26 @@ edit->setStyleSheet(
 | `QSpinBox*` | `#include <QSpinBox>` |
 | `QTimer*` | `#include <QTimer>` |
 | `QLabel*` | `#include <QLabel>` |
+| `QTabWidget*` | `#include <QTabWidget>` |
+| `QVector*` | `#include <QVector>` |
 
-### 检查清单
+### 检查流程（必须逐项核对）
 
-生成 `.h` 文件后，逐一检查：
-1. [ ] 每个自定义 slot 函数是否在 `.h` 中声明
-2. [ ] 每个返回 Qt 控件指针的函数是否有对应的 `#include`
-3. [ ] `.cpp` 中 include 的头文件是否也在 `.h` 中 include（如果类型在 `.h` 中出现）
+生成 `.h` 文件后，按以下顺序检查：
+
+1. [ ] **扫描所有成员变量声明**，找出所有 Qt 指针类型
+2. [ ] **对照上表**，确保每个类型都有对应的 `#include`
+3. [ ] **检查 private slots**，确保所有 slot 都有声明
+4. [ ] **检查返回值**，如果函数返回 Qt 控件指针，对应类型也要 include
+5. [ ] **对照检查一遍**：打开 UI 文件，列出所有控件，确认 .h 中都有 include
+
+### 快速检查技巧
+
+```cpp
+// 在 .h 文件中搜索这些关键字，确保都有对应的 include
+grep -n "QLineEdit" mainwindow.h  // 检查是否有 QLineEdit* 但没有 include
+grep -n "QPushButton" mainwindow.h // 检查是否有 QPushButton* 但没有 include
+```
 
 ---
 
