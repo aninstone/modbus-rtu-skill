@@ -137,6 +137,67 @@ uic mainwindow.ui -o ui_mainwindow.h
 
 ---
 
+## ⚠️ UI 样式注意事项（重要）
+
+生成 UI 控件时，必须设置正确的文字颜色，避免看不清：
+
+### 常见问题
+
+| 问题 | 原因 | 解决方案 |
+|------|------|---------|
+| 输入框文字看不清 | 浅色背景 + 白色文字 | 设置 `color: #2c3e50;` |
+| 日志框文字看不清 | 浅色背景 + 白色文字 | 设置 `color: #2c3e50;` |
+
+### 正确示例
+
+```cpp
+// ✅ 正确：深色文字在浅色背景上清晰可见
+edit->setStyleSheet(
+    "QLineEdit { "
+    "padding: 5px; "
+    "border: 2px solid #3498db; "
+    "border-radius: 3px; "
+    "background-color: #ecf0f1; "
+    "font-size: 14px; "
+    "color: #2c3e50; "  // 深灰色文字
+    "}"
+);
+```
+
+```xml
+<!-- ✅ 正确：在 UI 文件中添加 styleSheet 属性 -->
+<widget class="QTextEdit" name="textEditLog">
+    <property name="readOnly">
+        <bool>true</bool>
+    </property>
+    <property name="styleSheet">
+        <string>color: #2c3e50;</string>
+    </property>
+</widget>
+```
+
+### 错误示例
+
+```cpp
+// ❌ 错误：白色文字在浅色背景上看不清
+edit->setStyleSheet(
+    "QLineEdit { "
+    "background-color: #ecf0f1; "
+    "color: white; "  // 白色文字
+    "}"
+);
+```
+
+### 推荐颜色值
+
+| 用途 | 颜色代码 | 效果 |
+|------|---------|------|
+| 深色文字 | `#2c3e50` | 在浅色背景上清晰可见 |
+| 深灰色 | `#333333` | 同样适合浅色背景 |
+| 黑色 | `#000000` | 标准黑色文字 |
+
+---
+
 ## ⚠️ 头文件 include 完整性检查（重要）
 
 在 `.h` 头文件中使用任何 Qt 控件类型时，必须包含对应的头文件：
