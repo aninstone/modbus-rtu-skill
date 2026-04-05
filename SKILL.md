@@ -151,6 +151,28 @@ UI widgets and their object names:
 
 如果需要修改或扩展 `.ui` 文件，必须遵守以下规则：
 
+### ❌ 禁止在 QScrollArea 上使用 placeholderText
+
+**QScrollArea 不支持 `placeholderText` 属性**，这是 Qt 5 的 QLineEdit/QTextEdit 等输入控件才有的属性。
+
+```xml
+<!-- ❌ 错误：QScrollArea 没有 placeholderText -->
+<widget class="QScrollArea" name="scrollArea">
+  <property name="placeholderText">
+    <string/>
+  </property>
+  ...
+</widget>
+
+<!-- ✅ 正确：直接省略 placeholderText -->
+<widget class="QScrollArea" name="scrollArea">
+  <property name="widgetResizable">
+    <bool>true</bool>
+  </property>
+  ...
+</widget>
+```
+
 ### XML标签闭合规则
 
 ```xml
